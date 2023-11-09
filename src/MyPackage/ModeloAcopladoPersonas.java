@@ -18,7 +18,7 @@ public class ModeloAcopladoPersonas extends ViewableDigraph {
 
     private void initializeModel() {
         LeerArchivoJSON lectorJSON = new LeerArchivoJSON();
-        String rutaArchivo = "C:\\Users\\silvi\\OneDrive\\Escritorio\\DEVS_Suite_3.0.0_mixed_win64\\Personas.JSON";
+        String rutaArchivo = "Personas.JSON";
         lectorJSON.leerArchivoJSON(rutaArchivo);
         List<Archivo> archivos = lectorJSON.getArchivos();
         numPersonas = archivos.size();
@@ -46,9 +46,10 @@ public class ModeloAcopladoPersonas extends ViewableDigraph {
         }
         
         for (int i = 0; i < numPersonas; i++) {
-            for (int k = 1; k <= numPersonas - 1; k++) {
-                int targetIndex = (i + k) % numPersonas;
-                addCoupling(personas[i], "Outport " + k, personas[targetIndex], "Inport " + k);
+            for (int k = 0; k < numPersonas; k++) {
+                if (i != k) {
+                    addCoupling(personas[i], "Outport " + personas[k].getName(), personas[k], "Inport " + personas[i].getName());
+                }
             }
         }
         initialize();

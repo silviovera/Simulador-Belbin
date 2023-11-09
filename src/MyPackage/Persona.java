@@ -21,12 +21,14 @@ public class Persona extends ViewableAtomic {
     private double Porcentaje2;
     private int numPersonas; 
     private List<String> personalidadesDelGrupo = new ArrayList<>();
-    boolean mensajeGenerado = false;
-    CSVWriter csvWriter = new CSVWriter("C:\\Users\\silvi\\OneDrive\\Escritorio\\DEVS_Suite_3.0.0_mixed_win64\\resultados.csv");
-    
-    public Persona(String Nombre, String Personalidad1, String Personalidad2, double Porcentaje1, double Porcentaje2, List<String> personalidadesDelGrupo,List<Persona> personasEnGrupo) {
-        super(Nombre);
+    private List<Persona> personasEnGrupo = new ArrayList<>();
+    private List<String> nombresMejoresCompatibilidades = new ArrayList<>();
 
+    boolean mensajeGenerado = false;
+    CSVWriter csvWriter = new CSVWriter("resultados.csv");
+    
+    public Persona(String Nombre, String Personalidad1, String Personalidad2, double Porcentaje1, double Porcentaje2, List<String> personalidadesDelGrupo, List<Persona> personasEnGrupo) {
+        super(Nombre);
 
         this.Nombre = Nombre;
         this.Personalidad1 = Personalidad1;
@@ -34,28 +36,25 @@ public class Persona extends ViewableAtomic {
         this.Porcentaje1 = Porcentaje1;
         this.Porcentaje2 = Porcentaje2;
         this.personalidadesDelGrupo = personalidadesDelGrupo;
+        this.personasEnGrupo = personasEnGrupo;
 
-
-        
         LeerArchivoJSON lectorJSON = new LeerArchivoJSON();
-        String rutaArchivo = "C:\\Users\\silvi\\OneDrive\\Escritorio\\DEVS_Suite_3.0.0_mixed_win64\\Personas.JSON";
+        String rutaArchivo = "Personas.JSON";
         lectorJSON.leerArchivoJSON(rutaArchivo);
         List<Archivo> archivos = lectorJSON.getArchivos();
         numPersonas = archivos.size();
-
-
-        for (int i = 1; i <= numPersonas - 1; i++) {
-            addInport("Inport " + i);
-        }
-
-        for (int i = 1; i <= numPersonas - 1; i++) {
-            addOutport("Outport " + i);
-        }
         
-        
+        for (Archivo archivo : archivos) {
+            String nombrePersona = archivo.getNombre();
 
+            if (!nombrePersona.equals(Nombre)) {
+                addInport("Inport " + nombrePersona);
+                addOutport("Outport " + nombrePersona);
+            }
+        }
     }
     private double tiempoHabladoAcumulado = 0.0;
+
     @Override
     public void initialize() {
     	
@@ -75,49 +74,44 @@ public class Persona extends ViewableAtomic {
         }
         super.initialize();
     }
-
-
     
     @Override
     public void deltint() {
-    	
         System.out.println(this.Nombre + " deltint()");
         double tiempoDeHabla = calcularTiempoDeHabla(personalidadesDelGrupo);
-
-        System.out.print("persona hablando: "+this.Nombre+ ", Tiempo hablando: "+ tiempoDeHabla);
-        String registroCSV = this.Nombre + "," + tiempoDeHabla +"\n";
+        System.out.println(this.Nombre + ", Tiempo hablado: " + tiempoDeHabla);
+        String registroCSV = this.Nombre + "," + tiempoDeHabla + "\n";
         csvWriter.writeToCSV(registroCSV);
-            if (hablando) {
-                tiempoHabladoAcumulado += tiempoDeHabla;
-                if (tiempoHabladoAcumulado >= sigma) {
-                    hablando = false;
-                    escuchando = true;
-                    mensajeGenerado = false;
-                    passivate();
-                }
-            } else {
+
+        if (hablando) {
+            tiempoHabladoAcumulado += tiempoDeHabla;
+            if (tiempoHabladoAcumulado >= sigma) {
+                hablando = false;
                 escuchando = true;
+                mensajeGenerado = false;
+                passivate();
             }
-        
-        
-
+        } else {
+            escuchando = true;
+        }
     }
-
     @Override
     public message out() {
         message m = new message();
-
-        if (hablando && !mensajeGenerado) {
-            int numPuertosDestino = numPersonas - 1; 
-            int numeroAleatorio = generarNumeroAleatorio(numPuertosDestino);
+        List<String> personasCompatibles = evaluarsiguientepersona(this.Nombre, 4,this.Personalidad1,this.Personalidad2,this.Porcentaje1,this.Porcentaje2);
+        String nombreCompanero = obtenerNombrePersonaAleatoria(obtenerNombresMejoresCompatibilidades(personasCompatibles));
+        System.out.println("lista compatibles:"+personasCompatibles);
+        System.out.println("persona elegida:"+nombreCompanero);
+        if (hablando && !mensajeGenerado && !nombreCompanero.isEmpty()) {
             double tiempoDeHabla = calcularTiempoDeHabla(personalidadesDelGrupo);
-            tiempoTranscurrido=tiempoTranscurrido+tiempoDeHabla;
-            String puertoSalida = "Outport " + (numeroAleatorio + 1); 
-            m.add(makeContent(puertoSalida, new entity("Toma tu turno de hablar")));
-            mensajeGenerado = true;
-        
+            tiempoTranscurrido += tiempoDeHabla;
+            if (!nombreCompanero.isEmpty()) {
+                String puertoSalida = "Outport " + nombreCompanero;
+                m.add(makeContent(puertoSalida, new entity("Toma tu turno de hablar")));
+                mensajeGenerado = true;
+            }
         }
-        
+
         return m;
     }
 
@@ -143,7 +137,7 @@ public class Persona extends ViewableAtomic {
 	public boolean puedeIniciarConversacion() {
         double mayorPorcentaje = 0.0;
         LeerArchivoJSON lectorJSON = new LeerArchivoJSON();
-        String rutaArchivo = "C:\\Users\\silvi\\OneDrive\\Escritorio\\DEVS_Suite_3.0.0_mixed_win64\\Personas.JSON";
+        String rutaArchivo = "Personas.JSON";
         lectorJSON.leerArchivoJSON(rutaArchivo);
         List<Archivo> archivos = lectorJSON.getArchivos();
 
@@ -278,9 +272,164 @@ public class Persona extends ViewableAtomic {
 	    tiempoDeHabla=tiempoDeHabla*promedioPorcentajes;
 	    return tiempoDeHabla;
 	}
-	private int generarNumeroAleatorio(int maximo) {
-	    Random random = new Random();
-	    return random.nextInt(maximo);
-	}
+	private String obtenerNombrePersonaAleatoria(List<String> listaNombres) {
+	    if (listaNombres.isEmpty()) {
+	        return "";
+	    }
 
+	    Random random = new Random();
+	    int index = random.nextInt(listaNombres.size());
+
+	    while (listaNombres.get(index).equals(Nombre)) {
+	        index = random.nextInt(listaNombres.size());
+	    }
+
+	    return listaNombres.get(index);
+	}
+	public List<String> evaluarsiguientepersona(String personaQueHabla,int limite,String per1,String per2 ,double P1,double P2) {
+	    Map<String, Double> Compatibilidad = new HashMap<>();
+	    Compatibilidad.put("Investigador de Recursos-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Cohesionador", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Coordinador", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Cerebro", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Especialista", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Impulsor", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Implementador", 1.0);
+	    Compatibilidad.put("Investigador de Recursos-Finalizador ", 1.0);
+	    Compatibilidad.put("Cohesionador-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Cohesionador-Cohesionador", 1.0);
+	    Compatibilidad.put("Cohesionador-Coordinador", 1.0);
+	    Compatibilidad.put("Cohesionador-Cerebro", 1.0);
+	    Compatibilidad.put("Cohesionador-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Cohesionador-Especialista", 1.0);
+	    Compatibilidad.put("Cohesionador-Impulsor", 1.0);
+	    Compatibilidad.put("Cohesionador-Implementador", 1.0);
+	    Compatibilidad.put("Cohesionador-Finalizador ", 1.0);
+	    Compatibilidad.put("Coordinador-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Coordinador-Cohesionador", 1.0);
+	    Compatibilidad.put("Coordinador-Coordinador", 1.0);
+	    Compatibilidad.put("Coordinador-Cerebro", 1.0);
+	    Compatibilidad.put("Coordinador-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Coordinador-Especialista", 1.0);
+	    Compatibilidad.put("Coordinador-Impulsor", 1.0);
+	    Compatibilidad.put("Coordinador-Implementador", 1.0);
+	    Compatibilidad.put("Coordinador-Finalizador ", 1.0);
+	    Compatibilidad.put("Cerebro-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Cerebro-Cohesionador", 1.0);
+	    Compatibilidad.put("Cerebro-Coordinador", 1.0);
+	    Compatibilidad.put("Cerebro-Cerebro", 1.0);
+	    Compatibilidad.put("Cerebro-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Cerebro-Especialista", 1.0);
+	    Compatibilidad.put("Cerebro-Impulsor", 1.0);
+	    Compatibilidad.put("Cerebro-Implementador", 1.0);
+	    Compatibilidad.put("Cerebro-Finalizador ", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Cohesionador", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Coordinador", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Cerebro", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Especialista", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Impulsor", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Implementador", 1.0);
+	    Compatibilidad.put("Monitor Evaluador-Finalizador ", 1.0);
+	    Compatibilidad.put("Especialista-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Especialista-Cohesionador", 1.0);
+	    Compatibilidad.put("Especialista-Coordinador", 1.0);
+	    Compatibilidad.put("Especialista-Cerebro", 1.0);
+	    Compatibilidad.put("Especialista-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Especialista-Especialista", 1.0);
+	    Compatibilidad.put("Especialista-Impulsor", 1.0);
+	    Compatibilidad.put("Especialista-Implementador", 1.0);
+	    Compatibilidad.put("Especialista-Finalizador ", 1.0);
+	    Compatibilidad.put("Impulsor-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Impulsor-Cohesionador", 1.0);
+	    Compatibilidad.put("Impulsor-Coordinador", 1.0);
+	    Compatibilidad.put("Impulsor-Cerebro", 1.0);
+	    Compatibilidad.put("Impulsor-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Impulsor-Especialista", 1.0);
+	    Compatibilidad.put("Impulsor-Impulsor", 1.0);
+	    Compatibilidad.put("Impulsor-Implementador", 1.0);
+	    Compatibilidad.put("Impulsor-Finalizador ", 1.0);
+	    Compatibilidad.put("Implementador-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Implementador-Cohesionador", 1.0);
+	    Compatibilidad.put("Implementador-Coordinador", 1.0);
+	    Compatibilidad.put("Implementador-Cerebro", 1.0);
+	    Compatibilidad.put("Implementador-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Implementador-Especialista", 1.0);
+	    Compatibilidad.put("Implementador-Impulsor", 1.0);
+	    Compatibilidad.put("Implementador-Implementador", 1.0);
+	    Compatibilidad.put("Implementador-Finalizador ", 1.0);
+	    Compatibilidad.put("Finalizador-Investigador de Recursos", 1.0);
+	    Compatibilidad.put("Finalizador-Cohesionador", 1.0);
+	    Compatibilidad.put("Finalizador-Coordinador", 1.0);
+	    Compatibilidad.put("Finalizador-Cerebro", 1.0);
+	    Compatibilidad.put("Finalizador-Monitor Evaluador", 1.0);
+	    Compatibilidad.put("Finalizador-Especialista", 1.0);
+	    Compatibilidad.put("Finalizador-Impulsor", 1.0);
+	    Compatibilidad.put("Finalizador-Implementador", 1.0);
+	    Compatibilidad.put("Finalizador-Finalizador ", 1.0);
+
+
+	    LeerArchivoJSON lectorJSON = new LeerArchivoJSON();
+	    String rutaArchivo = "Personas.JSON";
+	    lectorJSON.leerArchivoJSON(rutaArchivo);
+	    List<Archivo> archivos = lectorJSON.getArchivos();
+
+
+	    List<String> personasConCompatibilidad = new ArrayList<>();
+
+	    for (Archivo archivo : archivos) {
+	        String nombrePersona = archivo.getNombre();
+	        if (nombrePersona.equals(personaQueHabla)) {
+	            continue;
+	        }
+
+	        String personalidadPersona1 = archivo.getPersonalidad1();
+	        String personalidadPersona2 = archivo.getPersonalidad2();
+	        double porcentajePersona1 = archivo.getPorcentaje1();
+	        double porcentajePersona2 = archivo.getPorcentaje2();
+	        
+	        double compatibilidadTotal = 0.0;
+	        String combinacion1 =  per1+ "-" + personalidadPersona1;
+	        String combinacion2 =  per2+ "-" + personalidadPersona2;
+	        if (Compatibilidad.containsKey(combinacion1)) {
+	            double compatibilidad1 = Compatibilidad.get(combinacion1);
+	            compatibilidadTotal += compatibilidad1 * porcentajePersona1 * P1;
+	        }
+	        if (Compatibilidad.containsKey(combinacion2)) {
+	            double compatibilidad2 = Compatibilidad.get(combinacion2);
+	            compatibilidadTotal += compatibilidad2 * porcentajePersona2 * P2;
+	        }
+	        
+	        personasConCompatibilidad.add(nombrePersona + ": " + compatibilidadTotal);
+	    }
+
+	    personasConCompatibilidad.sort((a, b) -> {
+	        double compatibilidadA = Double.parseDouble(a.split(": ")[1]);
+	        double compatibilidadB = Double.parseDouble(b.split(": ")[1]);
+	        return Double.compare(compatibilidadB, compatibilidadA);
+	    });
+
+
+	    if (personasConCompatibilidad.size() > limite) {
+	        personasConCompatibilidad = personasConCompatibilidad.subList(0, limite);
+	    }
+
+	    return personasConCompatibilidad;
+	}
+	public List<String> obtenerNombresMejoresCompatibilidades(List<String> mejoresCompatibilidades) {
+	    List<String> nombresMejoresCompatibilidades = new ArrayList<>();
+
+	    for (String elemento : mejoresCompatibilidades) {
+	        String[] partes = elemento.split(":");
+	        if (partes.length == 2) {
+	            String nombrePersona = partes[0].trim(); 
+	            nombresMejoresCompatibilidades.add(nombrePersona);
+	        }
+	    }
+
+	    return nombresMejoresCompatibilidades;
+	}
+	
 }

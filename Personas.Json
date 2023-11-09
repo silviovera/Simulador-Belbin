@@ -24,7 +24,7 @@
         "porcentaje2": 0.28
     },
     {
-        "nombre": "antonio",
+        "nombre": "Antonio",
         "codigo": "4",
         "personalidad1": "Coordinador",
         "personalidad2": "Cerebro",
@@ -38,5 +38,20 @@
         "personalidad2": "Implementador",
         "porcentaje1": 0.80,
         "porcentaje2": 0.3
+    },    {
+        "nombre": "Joel",
+        "codigo": "6",
+        "personalidad1": "Cerebro",
+        "personalidad2": "Finalizador",
+        "porcentaje1": 0.26,
+        "porcentaje2": 0.45
+    },
+    {
+        "nombre": "Karina",
+        "codigo": "7",
+        "personalidad1": "Impulsor",
+        "personalidad2": "Investigador de Recursos",
+        "porcentaje1": 0.51,
+        "porcentaje2": 0.67
     }
 ]

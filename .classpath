@@ -32,7 +32,7 @@
 	<classpathentry kind="lib" path="DEVS_Suite_3.0.0_lib/org.eclipse.osgi.services_3.3.100.v20130513-1956.jar"/>
 	<classpathentry kind="lib" path="DEVS_Suite_3.0.0_lib/org.eclipse.ui.workbench_3.105.0.v20130529-1406.jar"/>
 	<classpathentry kind="lib" path="timeview.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
